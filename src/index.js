@@ -1,34 +1,48 @@
-import express from 'express';
-import { app, auth, firestore } from './firebaseConfig.js'; // Import the required Firebase functionalities
+import { createUserWithEmailAndPassword, getAdditionalUserInfo } from "@firebase/auth";
+import { addDoc, collection, serverTimestamp } from "@firebase/firestore";
+import express from "express";
+import { auth, firestore } from "./firebaseConfig.js"; // Renaming Firebase app to avoid conflict
 
-const app = express();
+const expressApp = express();
 const port = 3000;
 
-app.use(express.json());
+// Middleware to parse JSON requests
+expressApp.use(express.json());
 
-app.post('/signup', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        res.send(`User created: ${userCredential.user.uid}`);
-    } catch (error) {
-        res.status(400).send(`Error: ${error.message}`);
-    }
+expressApp.post("/signup", async (req, res) => {
+    const { email, password } = req.body;
+    createUserWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+            // Signed up successfully
+            const infor = getAdditionalUserInfo(userCredential)
+            console.log(infor);
+            res.send(`User created!`);
+        })
+        .catch((error) => {
+            // Handle signup errors
+            res.status(400).send(`Error: ${error.message}`);
+        });
 });
 
-app.post('/addData', async (req, res) => {
+// Example usage of Firestore
+expressApp.post("/addData", async (req, res) => {
     try {
         const { name, email } = req.body;
-        const docRef = await firestore.collection('users').add({
-            name: name,
-            email: email
+        const timestamp = serverTimestamp();
+        await addDoc(collection(firestore, "users"), {
+            uid: `${timestamp}+ '_' + ${name}`,
+            name,
+            email,
+            createdAt: timestamp,
+            updatedAt: timestamp,
         });
-        res.send(`Document written with ID: ${docRef.id}`);
+
+        res.send(`Add data success`);
     } catch (error) {
-        res.status(400).send(`Error: ${error.message}`);
+        res.status(400).send(`Error: ${error.message} `);
     }
 });
 
-app.listen(port, () => {
+expressApp.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
 });
