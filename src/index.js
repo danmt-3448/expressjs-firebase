@@ -30,7 +30,7 @@ expressApp.post("/addData", async (req, res) => {
         const { name, email } = req.body;
         const timestamp = serverTimestamp();
         await addDoc(collection(firestore, "users"), {
-            uid: `${timestamp}+ '_' + ${name}`,
+            uid: `${new Date()}+ '_' + ${name}`,
             name,
             email,
             createdAt: timestamp,
